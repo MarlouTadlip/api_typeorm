@@ -1,19 +1,32 @@
-import { AppDataSource } from "./data-source"
-import { User } from "./entity/User"
+import { AppDataSource,ensureDbExists } from "./data-source"
+import express from 'express'
+import { usersRoutes } from './users/users.routes'
+import  errorHandler  from './_middleware/error-handler'
 
-AppDataSource.initialize().then(async () => {
+const app = express()
+const port = process.env.PORT as unknown as number || 3000
 
-    console.log("Inserting a new user into the database...")
-    const user = new User()
-    user.firstName = "Timber"
-    user.lastName = "Saw"
-    await AppDataSource.manager.save(user)
-    console.log("Saved a new user with id: " + user.id)
+//middlewares
+app.use(express.json())
+app.use(express.urlencoded({extended : true}))
 
-    console.log("Loading users from the database...")
-    const users = await AppDataSource.manager.find(User)
-    console.log("Loaded users: ", users)
 
-    console.log("Here you can setup and run express / fastify / any other framework.")
 
-}).catch(error => console.log(error))
+//db initilization
+ensureDbExists()
+    .then(() => {
+        AppDataSource.initialize()
+    .then( () => {
+     console.log("Database connected")})
+    .catch(error => console.log(error))})
+
+//routes
+app.use('/api/users', usersRoutes)
+
+//global error handler
+app.use(errorHandler)
+
+//start server
+app.listen(port, () => {
+    console.log(`Server started at http://localhost:3000`)
+})
